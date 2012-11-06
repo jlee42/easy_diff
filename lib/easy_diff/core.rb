@@ -1,9 +1,30 @@
 module EasyDiff
   module Core
-    def self.easy_diff(original, modified)
+    def self.remove_ignored(input_hash, ignore_array)
+      if input_hash.is_a?(Hash)
+        input_hash.each do |key, value|
+          if value.is_a?(Hash)
+            remove_ignored(value, ignore_array)
+          elsif value.is_a?(Array)
+            value.each {|v| remove_ignored(v, ignore_array) }
+          else
+            input_hash[key] = nil if ignore_array.include?(key)
+          end
+        end
+      else
+        input_hash
+      end
+    end
+    
+    def self.easy_diff(original, modified, options = {})
       removed = nil
       added   = nil
-
+      
+      if options[:ignore]
+        remove_ignored(original, options[:ignore])
+        remove_ignored(modified, options[:ignore])
+      end
+      
       if original.nil?
         added = modified.safe_dup 
       elsif modified.nil?
@@ -20,8 +41,8 @@ module EasyDiff
         keys_added.each{ |key| added[key] = modified[key].safe_dup }
         keys_in_common.each do |key|
           r, a = easy_diff original[key], modified[key]
-          removed[key] = r unless r.nil?
-          added[key] = a unless a.nil?
+          removed[key] = r unless r.nil? || r.empty?
+          added[key] = a unless a.nil? || a.empty?
         end
       elsif original.is_a?(Array) && modified.is_a?(Array)
         removed = original - modified
@@ -30,7 +51,11 @@ module EasyDiff
         removed   = original
         added     = modified
       end
-      return removed, added
+      if removed.respond_to?(:empty?) && removed.empty? && added.respond_to?(:empty?) && added.empty?
+        return nil
+      else
+        return removed, added
+      end
     end
   
     def self.easy_unmerge!(original, removed)

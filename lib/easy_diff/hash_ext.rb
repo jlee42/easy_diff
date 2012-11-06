@@ -1,7 +1,7 @@
 module EasyDiff
   module HashExt
-    def easy_diff(other)
-      EasyDiff::Core.easy_diff self, other
+    def easy_diff(other, options = {})
+      EasyDiff::Core.easy_diff self, other, options
     end
 
     def easy_merge!(other)
